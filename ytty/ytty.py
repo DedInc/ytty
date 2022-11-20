@@ -3,7 +3,6 @@ from os.path import exists, normpath, getsize, abspath, dirname, join as pjoin
 from subprocess import Popen
 from sys import platform
 from time import sleep
-from threading import Thread
 from undetected_chromedriver import Chrome, ChromeOptions
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -13,6 +12,8 @@ from selenium.webdriver.common.keys import Keys
 from requests import get
 from vidspinner import unique
 from pyperclip import copy as copy2clip
+from keyboard import write, press
+from pythread import createThread, stopThread
 
 CDIR = abspath(dirname(__file__))
 
@@ -92,16 +93,19 @@ def googleSession(login, password, ver=None):
 	driver = initer()
 	driver.get('https://accounts.google.com/signin')
 	loginField = driver.find_element(By.ID, 'identifierId')
-	nextButton = driver.find_elements(By.CSS_SELECTOR, 'button')[2]
 	actions = ActionChains(driver)
-	actions.move_to_element(loginField).click().send_keys(login).perform()
-	actions.move_to_element(nextButton).click().perform()
-	sleep(3)
-	passwordField = driver.find_element(By.ID, 'password')
-	actions.move_to_element(passwordField).click().send_keys(password).perform()
-	nextButton = driver.find_elements(By.CSS_SELECTOR, 'button')[2]
-	actions.move_to_element(nextButton).click().perform()
-	sleep(3)
+	actions.move_to_element(loginField).click().perform()
+	write(login)
+	sleep(0.5)
+	press('enter')
+
+	actions = ActionChains(driver)
+	passwordField = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, 'password')))
+	actions.move_to_element(passwordField).click().perform()
+	write(password)
+	sleep(0.5)
+	press('enter')
+	sleep(5)
 	return driver
 
 def getYTDlp():
@@ -141,12 +145,11 @@ def getThumbnail(vid):
 	return fname
 
 def notifyCloser():
-	while True:
-		try:
-			closeNotify = WebDriverWait(driver, 0.1).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#close-button')))
-			click(driver, closeNotify)
-		except:
-			pass
+	try:
+		closeNotify = WebDriverWait(driver, 0.1).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#close-button')))
+		click(driver, closeNotify)
+	except:
+		pass
 
 def uploadVideo(driver, options):
 	driver.get('https://youtube.com/upload')
@@ -157,7 +160,7 @@ def uploadVideo(driver, options):
 	except:
 		pass
 
-	t = Thread(target=notifyCloser)
+	t = createThread('NotifyCloser', notifyCloser, 0.1)
 	t.start()
 
 	inputs = driver.find_elements(By.TAG_NAME, 'input')
@@ -165,15 +168,16 @@ def uploadVideo(driver, options):
 		if input.get_attribute('type') == 'file':
 			picker = input
 			break
+
 	picker.send_keys(abspath(options.upload.video))
 
 	WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div#textbox')))
 
 	textboxes = driver.find_elements(By.CSS_SELECTOR, 'div#textbox')
 	titleElem = textboxes[len(textboxes) - 2]
-	driver.execute_script('arguments[0].innerText = \'\'', titleElem)
 	descriptionElem = textboxes[len(textboxes) - 3]
 
+	driver.execute_script('arguments[0].innerText = \'\'', titleElem)
 	setValue(driver, titleElem, options.upload.title)
 	setValue(driver, descriptionElem, options.upload.description)
 
@@ -223,9 +227,11 @@ def uploadVideo(driver, options):
 
 	publish = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#done-button:not([disabled])')))
 	click(driver, publish)
+
 	while len(driver.find_elements(By.CSS_SELECTOR, 'ytcp-video-upload-progress[uploading]')) != 0:
 		pass
-	t.join()
+
+	stopThread(t)
 
 def parseVideos(driver, options):
 	parseList = []

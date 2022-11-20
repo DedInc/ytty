@@ -10,7 +10,7 @@ if 'win' not in platform:
 
 setup(
     name='ytty',
-    version='1.0.1',
+    version='1.0.2',
     author='Maehdakvan',
     author_email='visitanimation@google.com',
     description='Ytty - Powerful tool for parsing, downloading and uploading videos from youtube based on selenium.',
@@ -27,6 +27,6 @@ setup(
     ],
     packages=find_packages(),
     include_package_data=True,
-    install_requires=['vidspinner', 'pyperclip', 'undetected-chromedriver', 'requests'],
+    install_requires=['vidspinner', 'pyperclip', 'undetected-chromedriver', 'requests', 'keyboard', 'pythread'],
     python_requires='>=3.6'
 )
