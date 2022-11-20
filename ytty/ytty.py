@@ -92,14 +92,14 @@ def googleSession(login, password, ver=None):
 	driver = initer()
 	driver.get('https://accounts.google.com/signin')
 	loginField = driver.find_element(By.ID, 'identifierId')
-	nextButton = driver.find_element(By.XPATH, '/html/body/div[1]/div[1]/div[2]/div/div[2]/div/div/div[2]/div/div[2]/div/div[1]/div/div/button')
+	nextButton = driver.find_elements(By.CSS_SELECTOR, 'button')[2]
 	actions = ActionChains(driver)
 	actions.move_to_element(loginField).click().send_keys(login).perform()
 	actions.move_to_element(nextButton).click().perform()
 	sleep(3)
 	passwordField = driver.find_element(By.ID, 'password')
 	actions.move_to_element(passwordField).click().send_keys(password).perform()
-	nextButton = driver.find_element(By.XPATH, '/html/body/div[1]/div[1]/div[2]/div/div[2]/div/div/div[2]/div/div[2]/div/div[1]/div/div/button')
+	nextButton = driver.find_elements(By.CSS_SELECTOR, 'button')[2]
 	actions.move_to_element(nextButton).click().perform()
 	sleep(3)
 	return driver

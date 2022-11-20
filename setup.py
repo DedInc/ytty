@@ -4,13 +4,13 @@ from sys import platform, exit
 with open('README.md', 'r', encoding='utf-8') as f:
     long_description = f.read()
 
-if not 'win' in platform:
+if 'win' not in platform:
     print('Only for windows!')
     exit()
 
 setup(
     name='ytty',
-    version='1.0.0',
+    version='1.0.1',
     author='Maehdakvan',
     author_email='visitanimation@google.com',
     description='Ytty - Powerful tool for parsing, downloading and uploading videos from youtube based on selenium.',
@@ -26,7 +26,7 @@ setup(
         'Operating System :: OS Independent',
     ],
     packages=find_packages(),
-    include_package_data = True,
-    install_requires = ['vidspinner', 'pyperclip', 'undetected-chromedriver', 'requests'],
+    include_package_data=True,
+    install_requires=['vidspinner', 'pyperclip', 'undetected-chromedriver', 'requests'],
     python_requires='>=3.6'
 )
