@@ -1,5 +1,4 @@
-from os import environ as env, access, sep, listdir, X_OK, rename, remove
-from os.path import exists, normpath, getsize, abspath, dirname, join as pjoin
+import os
 from subprocess import Popen
 from sys import platform
 from time import sleep
@@ -15,83 +14,60 @@ from pyperclip import copy as copy2clip
 from keyboard import write, press
 from pythread import createThread, stopThread
 
-CDIR = abspath(dirname(__file__))
+CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
+YT_DL_EXECUTABLE = os.path.join(CURRENT_DIR, 'ytdlp.exe')
+YOUTUBE_SEARCH_URL = 'https://www.youtube.com/results?search_query={}&sp={}'
+YOUTUBE_UPLOAD_URL = 'https://youtube.com/upload'
+GOOGLE_SIGNIN_URL = 'https://accounts.google.com/signin'
+DEFAULT_SEARCH_PERIODS = ('CAMSBAgCEAE=', 'CAMSBAgDEAE=', 'CAMSBAgEEAE=')
 
 class Options:
-	def __init__(self):
-		pass
-
-	def addOption(self, option, value):
-		exec(f'self.{option} = value')
+    def add_option(self, option, value):
+        setattr(self, option, value)
 
 class YTOptions:
 	def __init__(self):
 		self.parse = Options()
-		self.parse.addOption('search', 'Example search')
-		self.parse.addOption('period', 2)
-		self.parse.addOption('max', 20)
-		self.download = Options()
-		self.download.addOption('unique', False)
-		self.upload = Options()
-		self.upload.addOption('title', 'Example title')
-		self.upload.addOption('description', None)
-		self.upload.addOption('tags', [])
-		self.upload.addOption('preview', None)
-		self.upload.addOption('noKids', 1)
-		self.upload.addOption('category', 12)
-		self.upload.addOption('access', 'PUBLIC')
-		self.upload.public = Options()
-		self.upload.public.addOption('premiere', False)
 
-def getChrome():
-	global version
-	candidates = set()
-	for item in map(
-		env.get, ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA")
-	):
-		for subitem in (
-			"Google/Chrome/Application",
-			"Google/Chrome Beta/Application",
-			"Google/Chrome Canary/Application",
-		):
-			try:
-				candidates.add(sep.join((item, subitem, "chrome.exe")))
-			except:
-				pass
-	for candidate in candidates:
-		if exists(candidate) and access(candidate, X_OK):
-			path = normpath(candidate)
-			version = int(listdir(path.split('Application')[0] + 'Application')[0].split('.')[0])
-			return path
+		self.parse.add_option('search', 'Example search')
+		self.parse.add_option('period', 2)
+		self.parse.add_option('max', 20)
+
+		self.download = Options()
+		self.download.add_option('unique', False)
+
+		self.upload = Options()
+		self.upload.add_option('title', 'Example title')
+		self.upload.add_option('description', None)
+		self.upload.add_option('tags', [])
+		self.upload.add_option('preview', None)
+		self.upload.add_option('noKids', 1)
+		self.upload.add_option('category', 12)
+		self.upload.add_option('access', 'PUBLIC')
+
+		self.upload.public = Options()
+		self.upload.public.add_option('premiere', False)
+
+def get_options(headless = False):
+	options = ChromeOptions()
+	if headless:
+		options.add_argument('--headless')
+	options.add_argument('--disable-dev-shm-usage')
+	options.add_argument('--no-sandbox')
+	options.add_argument('--no-first-run')
+	options.add_argument('--no-service-autorun')
+	options.add_argument('--lang=en-US')
+	return options
 
 def initer():
-	options = ChromeOptions()
-	options.add_argument('--disable-dev-shm-usage')
-	options.add_argument('--no-sandbox')
-	options.add_argument('--no-first-run')
-	options.add_argument('--no-service-autorun')
-	options.add_argument('--lang=en-US')
-	if 'win' in platform:
-		options.binary_location = getChrome()
-		ver = version
-	return Chrome(options=options, version_main=ver)
+	return Chrome(options=get_options())
 
-def shadowSession():
-	options = ChromeOptions()
-	options.add_argument('--headless')
-	options.add_argument('--disable-dev-shm-usage')
-	options.add_argument('--no-sandbox')
-	options.add_argument('--no-first-run')
-	options.add_argument('--no-service-autorun')
-	options.add_argument('--lang=en-US')
-	if 'win' in platform:
-		options.binary_location = getChrome()
-		ver = version
-	return Chrome(options=options, version_main=ver)
+def shadow_session():
+	return Chrome(options=get_options(True))
 
-def googleSession(login, password, ver=None):
+def google_session(login, password, ver=None):
 	driver = initer()
-	driver.get('https://accounts.google.com/signin')
+	driver.get(GOOGLE_SIGNIN_URL)
 	loginField = driver.find_element(By.ID, 'identifierId')
 	actions = ActionChains(driver)
 	actions.move_to_element(loginField).click().perform()
@@ -100,7 +76,7 @@ def googleSession(login, password, ver=None):
 	press('enter')
 
 	actions = ActionChains(driver)
-	passwordField = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, 'password')))
+	passwordField = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.ID, 'password')))
 	actions.move_to_element(passwordField).click().perform()
 	write(password)
 	sleep(0.5)
@@ -108,9 +84,8 @@ def googleSession(login, password, ver=None):
 	sleep(5)
 	return driver
 
-def getYTDlp():
-	ytdlp = pjoin(CDIR, 'ytdlp.exe')
-	if not exists(ytdlp):
+def get_ytdlp():	
+	if not os.path.exists(YT_DL_EXECUTABLE):
 		print('Install yt-dlp...')
 		r = get('https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest').json()
 		for asset in r['assets']:
@@ -120,9 +95,9 @@ def getYTDlp():
 				break
 	return ytdlp
 
-def getVideo(link, options=YTOptions()):
+def get_video(link, options=YTOptions()):
 	fname = '{}.mp4'.format(link.split('=')[1])
-	p = Popen(f'{getYTDlp()} "{link}" -f "mp4/bestvideo+bestaudio/best" -o "ytvideo.%(ext)s"')
+	p = Popen(f'{get_ytdlp()} "{link}" -f "mp4/bestvideo+bestaudio/best" -o "ytvideo.%(ext)s"')
 	p.communicate()
 	for file in listdir():
 		if 'ytvideo' in file:
@@ -133,7 +108,7 @@ def getVideo(link, options=YTOptions()):
 				rename(file, fname)
 	return fname
 
-def getThumbnail(vid):
+def get_thumbnail(vid):
 	mrd = f'https://img.youtube.com/vi/{vid}/maxresdefault.jpg'
 	d = f'https://img.youtube.com/vi/{vid}/0.jpg'
 	fname = f'{vid}.jpg'
@@ -144,15 +119,15 @@ def getThumbnail(vid):
 			f.write(get(d).content)
 	return fname
 
-def notifyCloser():
+def notify_closer():
 	try:
 		closeNotify = WebDriverWait(driver, 0.1).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#close-button')))
 		click(driver, closeNotify)
 	except:
 		pass
 
-def uploadVideo(driver, options):
-	driver.get('https://youtube.com/upload')
+def upload_video(driver, options):
+	driver.get(YOUTUBE_UPLOAD_URL)
 
 	try:
 		dismiss = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#dismiss-button')))
@@ -160,7 +135,7 @@ def uploadVideo(driver, options):
 	except:
 		pass
 
-	t = createThread('NotifyCloser', notifyCloser, 0.1)
+	t = createThread('NotifyCloser', notify_closer, 0.1)
 	t.start()
 
 	inputs = driver.find_elements(By.TAG_NAME, 'input')
@@ -178,8 +153,8 @@ def uploadVideo(driver, options):
 	descriptionElem = textboxes[len(textboxes) - 3]
 
 	driver.execute_script('arguments[0].innerText = \'\'', titleElem)
-	setValue(driver, titleElem, options.upload.title)
-	setValue(driver, descriptionElem, options.upload.description)
+	set_value(driver, titleElem, options.upload.title)
+	set_value(driver, descriptionElem, options.upload.description)
 
 	inputs = driver.find_elements(By.TAG_NAME, 'input')
 	for input in inputs:
@@ -201,7 +176,7 @@ def uploadVideo(driver, options):
 
 	tagsElem = driver.find_element(By.CSS_SELECTOR, 'input#text-input[aria-label]')
 
-	setValue(driver, tagsElem, tags)
+	set_value(driver, tagsElem, tags)
 
 	ytstrings = driver.find_elements(By.CSS_SELECTOR, 'yt-formatted-string')
 	for i in range(len(ytstrings) - 1, len(ytstrings) - 16):
@@ -233,11 +208,10 @@ def uploadVideo(driver, options):
 
 	stopThread(t)
 
-def parseVideos(driver, options):
+def parse_videos(driver, options):
 	parseList = []
-	i = 0
-	sps = ('CAMSBAgCEAE=', 'CAMSBAgDEAE=', 'CAMSBAgEEAE=')
-	searchUrl = 'https://www.youtube.com/results?search_query={}&sp={}'.format(options.parse.search.replace(' ', '+'), sps[options.parse.period])
+	i = 0	
+	searchUrl = YOUTUBE_SEARCH_URL.format(options.parse.search.replace(' ', '+'), DEFAULT_SEARCH_PERIODS[options.parse.period])
 	driver.get(searchUrl)
 	videos = driver.find_elements(By.CSS_SELECTOR, 'a#video-title')
 	for video in videos:
@@ -247,7 +221,7 @@ def parseVideos(driver, options):
 		i += 1
 	return parseList
 
-def setValue(driver, element, value):
+def set_value(driver, element, value):
 	i = 0
 	while i != 5:
 		try:

@@ -10,7 +10,7 @@ if 'win' not in platform:
 
 setup(
     name='ytty',
-    version='1.0.2',
+    version='1.0.3',
     author='Maehdakvan',
     author_email='visitanimation@google.com',
     description='Ytty - Powerful tool for parsing, downloading and uploading videos from youtube based on selenium.',
